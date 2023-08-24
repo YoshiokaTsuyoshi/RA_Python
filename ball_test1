@@ -1,0 +1,8 @@
+import pygame as pg
+import sys
+
+SCREEN_SIZE = (600, 400)
+BLOCK_SIZE = 50
+FRAME_RATE = 30
+PAGE = 0
+
