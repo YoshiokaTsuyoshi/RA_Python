@@ -7,7 +7,6 @@ BALL_SIZE = 50
 FRAME_RATE = 30
 
 def main():
-    global PAGE
 
     pg.init()
     screen = pg.display.set_mode(SCREEN_SIZE)
