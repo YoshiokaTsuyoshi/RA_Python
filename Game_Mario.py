@@ -2,26 +2,49 @@ import pygame as pg
 import sys
 import math
 
-SCREEN_SIZE = (600, 400)
+SCREEN_SIZE = (600, 500)
 BLOCK_SIZE = 50
 CLOCK_TICK = 30
 PAGE = 0
 
-class Stage():
-    def __init__(self):
-        self.player = Player((50, 100))
-        Enemy((300, 300))
-        stage = []
-        for i in range(1, 12, 2):
-            stage.append(Block((i * BLOCK_SIZE, BLOCK_SIZE * 7)))
-        stage.append(Block((BLOCK_SIZE * 3, BLOCK_SIZE * 5)))
-        stage.append(Block((BLOCK_SIZE * 5, BLOCK_SIZE * 4)))
-        stage.append(Block((BLOCK_SIZE * 6, BLOCK_SIZE * 4)))
-        stage.append(Block((BLOCK_SIZE * 7, BLOCK_SIZE * 3)))
-        for i in range(1, 7):
-            Goal((550, i * BLOCK_SIZE))
+class Scroller:
+    scrollX = 0
+    def __init__(self, rectX):
+        self.rectX = rectX
 
-class Player(pg.sprite.Sprite):
+class Stage(Scroller):
+    def __init__(self):
+        Scroller.scrollX = 0
+        stageMaxX = int(SCREEN_SIZE[0] / BLOCK_SIZE)
+        stageMaxY = int(SCREEN_SIZE[1] / BLOCK_SIZE)
+        self.player = Player((BLOCK_SIZE * 2, BLOCK_SIZE * (stageMaxY - 5)))
+        for i in range(15):
+            Block((BLOCK_SIZE * i, BLOCK_SIZE * (stageMaxY - 1)))  
+        for i in range(18, 19 + 30):
+            Block((BLOCK_SIZE * i, BLOCK_SIZE * (stageMaxY - 1)))
+        for i in range(1, stageMaxY - 1):
+            Goal((BLOCK_SIZE * (19 + 30 - 1), BLOCK_SIZE * i))
+        for i in range(6, 6 + 3):
+            Block((BLOCK_SIZE * i, BLOCK_SIZE * 5))
+        for i in range(9, 9 + 8):
+            Block((BLOCK_SIZE * i, BLOCK_SIZE * 1))
+        for i in range(20, 20 + 4):
+            Block((BLOCK_SIZE * i, BLOCK_SIZE * 1))
+        Block((BLOCK_SIZE * 23, BLOCK_SIZE * 5)) 
+        Block((BLOCK_SIZE * 29, BLOCK_SIZE * 5))
+        Block((BLOCK_SIZE * 30, BLOCK_SIZE * 5))
+        Block((BLOCK_SIZE * 35, BLOCK_SIZE * 5))
+        Block((BLOCK_SIZE * 38, BLOCK_SIZE * 5))
+        Block((BLOCK_SIZE * 38, BLOCK_SIZE * 1))
+        Block((BLOCK_SIZE * 41, BLOCK_SIZE * 5))
+        Enemy((BLOCK_SIZE * 10, BLOCK_SIZE * 6))
+        Enemy((BLOCK_SIZE * 24, BLOCK_SIZE * 6))
+        Enemy((BLOCK_SIZE * 30, BLOCK_SIZE * 6))
+        Enemy((BLOCK_SIZE * 32, BLOCK_SIZE * 6))
+        Enemy((BLOCK_SIZE * 34, BLOCK_SIZE * 6))
+        Enemy((BLOCK_SIZE * 39, BLOCK_SIZE * 6))
+
+class Player(pg.sprite.Sprite, Scroller):
     def __init__(self, pos):
         pg.sprite.Sprite.__init__(self, self.containers)
         self.blockSize = int(BLOCK_SIZE * 0.9)
@@ -30,12 +53,12 @@ class Player(pg.sprite.Sprite):
         self.rect = pg.Rect(pos[0], pos[1], self.blockSize, self.blockSize)
         self.image.set_colorkey((0, 0, 0))
         self.speed = [0.0, 0.0]
-        self.force = [0.0, 3]
+        self.force = [0.0, 3.0]
         self.period = 1.0
         self.maxSpeedX = 10
         self.maxForceX = 3
         self.beforePos = [self.rect.x, self.rect.y]
-        self.touchFlag = [False, False, 0, [0, 0]]
+        self.touchFlag = [False, False, 0, [0, 0]] #[ブロックに乗っているかどうか, 横のブロックに衝突しているかどうか, 未使用, 横のブロック衝突時の超えるべきy軸値]
         self.gameFlag = "None"
 
     def update(self, *args, **kwargs):
@@ -45,7 +68,14 @@ class Player(pg.sprite.Sprite):
         self.rect.y += self.speed[1] * self.period + self.force[1] * self.period**2
         self.speed[1] = self.speed[1] + self.force[1] * self.period
 
-        self.colJudge(kwargs["surviver"], kwargs["block"], False)
+        self.colJudge(kwargs["surviver"], kwargs["block"], kwargs["enemy"], False)
+        if self.rect.x < 0:
+            self.rect.x = 0
+            self.force[0] = 0.0
+            self.speed[0] = 0.0
+        elif self.rect.x > SCREEN_SIZE[0] / 2:
+            Scroller.scrollX += SCREEN_SIZE[0] / 2 - self.rect.x
+            self.rect.x = SCREEN_SIZE[0] / 2
 
         if self.speed[0] != 0:
             temp = (self.speed[0] / abs(self.speed[0]))
@@ -64,18 +94,23 @@ class Player(pg.sprite.Sprite):
         direction = keystate[pg.K_RIGHT] - keystate[pg.K_LEFT]
         self.force[0] += direction
         if self.touchFlag[1] != 0:
+            #touchFlag[1]が0以外の場合は横のブロックと衝突しているため、x軸方向の加速度を0にする
             self.force[0] = 0.0
             if (self.rect.y < self.touchFlag[3][0] or self.rect.y > self.touchFlag[3][1]) or self.rect.x != self.touchFlag[2] or self.touchFlag[1] + direction == 0:
+                #衝突している横のブロックからblockSize分y軸方向にずれるか、衝突と反対方向に動こうとする場合はtouchFlagを0にする
                 self.touchFlag[1] = 0
         if abs(self.force[0]) > self.maxForceX:
+            #x軸方向の加速度の閾値を設定
             self.force[0] = self.maxForceX * (self.force[0] / abs(self.force[0]))
         if abs(self.speed[0]) > self.maxSpeedX:
+            #x軸方向の速度の閾値を設定
             self.speed[0] = self.maxSpeedX * (self.speed[0] / abs(self.speed[0]))
         if self.speed[1] == 0 and (keystate[pg.K_UP] or keystate[pg.K_SPACE]) and self.touchFlag[0]:
-            self.speed[1] = -30
+            #Playerがブロック上にいるときにUPまたはSPACEを押すとジャンプ
+            self.speed[1] = -37
             self.touchFlag[0] = False
 
-    def colJudge(self, player, blocks, dokill):
+    def colJudge(self, player, blocks, enemys, dokill):
         while True:
             tempList = pg.sprite.spritecollide(player, blocks, dokill)
             if len(tempList) == 0:
@@ -125,6 +160,16 @@ class Player(pg.sprite.Sprite):
                         self.rect.x = self.beforePos[0]
                     break
 
+        tempList = pg.sprite.spritecollide(player, enemys, dokill)
+        for i in tempList:
+            if self.rect.y + self.blockSize < i.rect.y + i.blockSize / 2:
+                i.kill()
+                self.speed[1] = -30
+                break
+            else:
+                self.setFlag("GameOver")
+                break
+
     def gameOverJudge(self):
         if self.rect.y > SCREEN_SIZE[1] + BLOCK_SIZE:
             self.setFlag("GameOver")
@@ -135,18 +180,61 @@ class Player(pg.sprite.Sprite):
     def setFlag(self, flag):
         self.gameFlag = flag
 
-class Enemy(pg.sprite.Sprite):
+class Enemy(pg.sprite.Sprite, Scroller):
     def __init__(self, pos):
         pg.sprite.Sprite.__init__(self, self.containers)
-        self.image = pg.Surface((BLOCK_SIZE, BLOCK_SIZE))
-        pg.draw.polygon(self.image, (165, 42, 42), [(BLOCK_SIZE / 2, 0), (0, BLOCK_SIZE), (BLOCK_SIZE, BLOCK_SIZE)], 0)
+        self.blockSize = int(BLOCK_SIZE * 0.9)
+        self.image = pg.Surface((self.blockSize, self.blockSize))
+        pg.draw.polygon(self.image, (165, 42, 42), [(self.blockSize / 2, 0), (0, 4 * self.blockSize / 5), (self.blockSize / 5, self.blockSize), (4 * self.blockSize / 5, self.blockSize), (self.blockSize, 4 * self.blockSize / 5)], 0)
         self.image.set_colorkey((0, 0, 0))
-        self.rect = pg.Rect(pos[0], pos[1], BLOCK_SIZE, BLOCK_SIZE)
+        self.rect = pg.Rect(pos[0], pos[1], self.blockSize, self.blockSize)
+        self.speed = [-1.0, 0.0]
+        self.force = [0.0, 3.0]
+        self.period = 1.0
+        self.beforePos = [self.rect.x, self.rect.y]
+        Scroller.__init__(self, self.rect.x)
 
     def update(self, *args, **kwargs):
-        pass
+        self.rect.x = Scroller.scrollX + self.rectX
+        self.beforePos = [self.rect.x, self.rect.y]
+        self.rectX += self.speed[0] * self.period
+        self.rect.y += self.speed[1] * self.period + self.force[1] * self.period**2
+        self.speed[1] = self.speed[1] + self.force[1] * self.period
 
-class Block(pg.sprite.Sprite):
+        self.colJudge(kwargs["block"], False)
+
+    def colJudge(self, blocks, dokill):
+        while True:
+            tempList = pg.sprite.spritecollide(self, blocks, dokill)
+            if len(tempList) == 0:
+                break
+            for i in tempList:
+                if i.rect.y < self.rect.y + self.blockSize and i.rect.y > self.rect.y:
+                    #下ブロックと衝突
+                    self.speed[1] = 0.0
+                    self.rect.y = i.rect.y - self.blockSize
+                    if self.rect.y < self.beforePos[1]:
+                        self.rect.y = self.beforePos[1]
+                    break
+            
+            tempList = pg.sprite.spritecollide(self, blocks, dokill)
+            if len(tempList) == 0:
+                break
+            for i in tempList:
+                if i.rect.x + BLOCK_SIZE > self.rect.x and i.rect.x + BLOCK_SIZE < self.rect.x + self.blockSize:
+                    #左ブロックと衝突
+                    self.speed[0] *= -1
+                    self.rectX = i.rect.x + BLOCK_SIZE - Scroller.scrollX
+                    self.rect.x =  i.rect.x + BLOCK_SIZE
+                    break
+                elif i.rect.x < self.rect.x + self.blockSize and i.rect.x > self.rect.x:
+                    #右ブロックと衝突
+                    self.speed[0] *= -1
+                    self.rectX = i.rect.x - self.blockSize - Scroller.scrollX
+                    self.rect.x = i.rect.x - self.blockSize
+                    break
+
+class Block(pg.sprite.Sprite, Scroller):
     def __init__(self, pos):
         pg.sprite.Sprite.__init__(self, self.containers)
         self.image = pg.Surface((BLOCK_SIZE, BLOCK_SIZE))
@@ -154,18 +242,21 @@ class Block(pg.sprite.Sprite):
         pg.draw.rect(self.image, (165, 42, 42), pg.Rect(0, 0, BLOCK_SIZE, BLOCK_SIZE), 1)
         self.image.set_colorkey((0, 0, 0))
         self.rect = pg.Rect(pos[0], pos[1], BLOCK_SIZE, BLOCK_SIZE)
+        Scroller.__init__(self, self.rect.x)
 
     def update(self, *args, **kwargs):
-        pass
+        self.rect.x = Scroller.scrollX + self.rectX
 
-class Goal(pg.sprite.Sprite):
+class Goal(pg.sprite.Sprite, Scroller):
     def __init__(self, pos):
         pg.sprite.Sprite.__init__(self, self.containers)
         self.image = pg.Surface((BLOCK_SIZE / 3, BLOCK_SIZE))
         pg.draw.rect(self.image, (255, 255, 255), pg.Rect(0, 0, BLOCK_SIZE / 3, BLOCK_SIZE), 0)
         self.rect = pg.Rect(pos[0] + BLOCK_SIZE / 3, pos[1], BLOCK_SIZE / 3, BLOCK_SIZE)
+        Scroller.__init__(self, self.rect.x)
 
     def update(self, *args, **kwargs):
+        self.rect.x = Scroller.scrollX + self.rectX
         for i in pg.sprite.spritecollide(kwargs["surviver"], kwargs["goal"], False):
             kwargs["surviver"].setFlag("GameClear")
 
@@ -270,19 +361,6 @@ def main():
     Enemy.containers = all, enemys
     Goal.containers = all, goals
 
-    """
-    player = Player((50, 100))
-    Enemy((300, 300))
-    stage = []
-    for i in range(1, 12, 2):
-        stage.append(Block((i * BLOCK_SIZE, BLOCK_SIZE * 7)))
-    stage.append(Block((BLOCK_SIZE * 3, BLOCK_SIZE * 5)))
-    stage.append(Block((BLOCK_SIZE * 5, BLOCK_SIZE * 4)))
-    stage.append(Block((BLOCK_SIZE * 6, BLOCK_SIZE * 4)))
-    stage.append(Block((BLOCK_SIZE * 7, BLOCK_SIZE * 3)))
-    for i in range(7):
-        Goal((550, i * BLOCK_SIZE))
-    """
     clock = pg.time.Clock()
     player = None
     stage = None
