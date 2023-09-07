@@ -3,81 +3,50 @@ import sys
 
 SCREEN_SIZE = (600, 600)
 MASU_SIZE = 50
+STONE_RADIUS = 20
 FRAME_RATE = 30
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
-class Ball(pg.sprite.Sprite):
-    def __init__(self, pos):
+class Stone(pg.sprite.Sprite):
+    def __init__(self, pos, flag):
         pg.sprite.Sprite.__init__(self, self.containers)
-        self.image = pg.Surface((BALL_SIZE, BALL_SIZE))
-        pg.draw.circle(self.image, (255, 0, 0), (BALL_SIZE / 2, BALL_SIZE / 2), BALL_SIZE / 2)
-        self.rect = pg.Rect(pos[0], pos[1], BALL_SIZE, BALL_SIZE)
-        self.vect = [0, 0]
-        self.speed = 0
+        self.image = pg.Surface((MASU_SIZE, MASU_SIZE))
+        self.image.fill((0, 0, 0))
         self.image.set_colorkey((0, 0, 0))
-
-    def update(self, *args, **kwargs):
-        self.rect.x += self.vect[0] * self.speed * 0.001
-        self.rect.y += self.vect[1] * self.speed * 0.001
-
-        if self.rect.centerx - BALL_SIZE / 2 < 0 or self.rect.centerx + BALL_SIZE / 2 > SCREEN_SIZE[0]:
-            self.rect.x -= self.vect[0] * self.speed * 0.001
-            self.vect[0] *= -1
-        if self.rect.centery - BALL_SIZE / 2 < 0 or self.rect.centery + BALL_SIZE / 2 > SCREEN_SIZE[1]:
-            self.rect.y -= self.vect[1] * self.speed * 0.001
-            self.vect[1] *= -1
-
-        if self.speed > 0:
-            self.speed -= 1
-            if self.speed < 0:
-                self.speed = 0
-
-class Arrow(pg.sprite.Sprite):
-    def __init__(self, ball : Ball):
-        pg.sprite.Sprite.__init__(self, self.containers)
-        self.screen = pg.Surface(SCREEN_SIZE)
-        self.screen.fill((255, 255, 255))
-        self.image = pg.Surface((0, 0))
-        self.rect = pg.Rect(0, 0, 0, 0)
-        self.press_flag = False
-        self.mouse_start_pos = None
-        self.mouse_end_pos = None
-        self.ball = ball
-
-    def update(self, *args, **kwargs):
-        if self.press_flag:
-            self.mouse_end_pos = pg.mouse.get_pos()
-            self.mouse_vect = [self.mouse_end_pos[0] - self.mouse_start_pos[0], self.mouse_end_pos[1] - self.mouse_start_pos[1]]
-            vect_end = [self.ball.rect.centerx + self.mouse_vect[0], self.ball.rect.centery + self.mouse_vect[1]]
-            self.rect = pg.draw.line(self.screen, (0, 0, 0), self.ball.rect.center, vect_end)
-            self.image = pg.Surface((self.rect.w, self.rect.h))
-            self.image.blit(self.screen, (0, 0), self.rect)
-            self.image.set_colorkey((255, 255, 255))
-            self.screen.fill((255, 255, 255))
-            if not pg.mouse.get_pressed(3)[0]:
-                self.ball.vect = [self.mouse_end_pos[0] - self.mouse_start_pos[0], self.mouse_end_pos[1] - self.mouse_start_pos[1]]
-                self.ball.speed = math.sqrt(self.ball.vect[0]**2 + self.ball.vect[1]**2)
-                self.press_flag = False
-                self.image = pg.Surface((0, 0))
+        if flag:
+            pg.draw.circle(self.image, WHITE, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
         else:
-            if pg.mouse.get_pressed(3)[0]:
-                self.mouse_start_pos = pg.mouse.get_pos()
-                self.press_flag = True
+            pg.draw.circle(self.image, BLACK, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
+        self.rect = pg.Rect(pos, (MASU_SIZE, MASU_SIZE))
+        self.flag = flag
+
+    def update(self, *args, **kwargs):
+        pass
+
+    def turn(self):
+        self.image = pg.Surface((MASU_SIZE, MASU_SIZE))
+        if not self.flag:
+            pg.draw.circle(self.image, WHITE, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
+        else:
+            pg.draw.circle(self.image, BLACK, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
 
 def main():
 
     pg.init()
     screen = pg.display.set_mode(SCREEN_SIZE)
     background = pg.Surface(SCREEN_SIZE)
-    background.fill((255, 255, 255))
+    background.fill((0, 255, 255))
+    for i in range(8):
+        for j in range(8):
+            pg.draw.rect(background, (0, 255, 0), pg.Rect((SCREEN_SIZE[0]-MASU_SIZE*8)/2+i*MASU_SIZE, (SCREEN_SIZE[1]-MASU_SIZE*8)/2+j*MASU_SIZE, MASU_SIZE, MASU_SIZE))
+            pg.draw.rect(background, (0, 0, 0), pg.Rect((SCREEN_SIZE[0]-MASU_SIZE*8)/2+i*MASU_SIZE, (SCREEN_SIZE[1]-MASU_SIZE*8)/2+j*MASU_SIZE, MASU_SIZE, MASU_SIZE), 1)
     screen.blit(background, (0, 0))
     pg.display.flip()
 
     all = pg.sprite.RenderUpdates()
 
-    Ball.containers = all
-    Arrow.containers = all
-
-    Arrow(Ball((SCREEN_SIZE[0] / 2, SCREEN_SIZE[1] / 2)))
+    Stone.containers = all
     
     while True:
         for event in pg.event.get():
