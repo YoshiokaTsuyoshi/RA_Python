@@ -12,24 +12,33 @@ class Stone(pg.sprite.Sprite):
     def __init__(self, pos, flag):
         pg.sprite.Sprite.__init__(self, self.containers)
         self.image = pg.Surface((MASU_SIZE, MASU_SIZE))
-        self.image.fill((0, 0, 0))
-        self.image.set_colorkey((0, 0, 0))
+        self.image.fill((1, 1, 1))
+        self.image.set_colorkey((1, 1, 1))
         if flag:
             pg.draw.circle(self.image, WHITE, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
         else:
             pg.draw.circle(self.image, BLACK, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
-        self.rect = pg.Rect(pos, (MASU_SIZE, MASU_SIZE))
+        self.rect = pg.Rect(((SCREEN_SIZE[0]-MASU_SIZE*8)/2+pos[0]*MASU_SIZE, (SCREEN_SIZE[1]-MASU_SIZE*8)/2+pos[1]*MASU_SIZE), (MASU_SIZE, MASU_SIZE))
         self.flag = flag
 
     def update(self, *args, **kwargs):
         pass
 
     def turn(self):
+        self.flag = not self.flag
         self.image = pg.Surface((MASU_SIZE, MASU_SIZE))
-        if not self.flag:
+        if self.flag:
             pg.draw.circle(self.image, WHITE, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
         else:
             pg.draw.circle(self.image, BLACK, (MASU_SIZE / 2, MASU_SIZE / 2), STONE_RADIUS)
+
+class Stage():
+    def __init__(self):
+        self.stage = [[0 for _i in range(8)] for _j in range(8)]
+        self.stage[3][3] = Stone((3, 3), True)
+        self.stage[3][4] = Stone((3, 4), False)
+        self.stage[4][3] = Stone((4, 3), False)
+        self.stage[4][4] = Stone((4, 4), True)
 
 def main():
 
@@ -47,6 +56,8 @@ def main():
     all = pg.sprite.RenderUpdates()
 
     Stone.containers = all
+    
+    stage = Stage()
     
     while True:
         for event in pg.event.get():
