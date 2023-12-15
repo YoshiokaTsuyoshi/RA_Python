@@ -1,4 +1,3 @@
-from typing import Any
 import pygame as pg
 import sys
 import math
@@ -40,7 +39,7 @@ class FallGate(pg.sprite.Sprite):
         self.speed = 0
         self.spaceFlag = True
 
-    def update(self, *args: Any, **kwargs: Any) -> None:
+    def update(self, *args, **kwargs) -> None:
         if args[0][pg.K_SPACE]:
             if self.spaceFlag:
                 self.ball.fallFlag = True
@@ -63,38 +62,6 @@ class FallGate(pg.sprite.Sprite):
             self.rect.x = SCREEN_SIZE[0] - self.ballRadius - self.rect.w / 2
         self.ball.rect.x = self.rect.centerx - self.ballRadius
 
-class Arrow(pg.sprite.Sprite):
-    def __init__(self, ball : Ball):
-        pg.sprite.Sprite.__init__(self, self.containers)
-        self.screen = pg.Surface(SCREEN_SIZE)
-        self.screen.fill((255, 255, 255))
-        self.image = pg.Surface((0, 0))
-        self.rect = pg.Rect(0, 0, 0, 0)
-        self.press_flag = False
-        self.mouse_start_pos = None
-        self.mouse_end_pos = None
-        self.ball = ball
-
-    def update(self, *args, **kwargs):
-        if self.press_flag:
-            self.mouse_end_pos = pg.mouse.get_pos()
-            self.mouse_vect = [self.mouse_end_pos[0] - self.mouse_start_pos[0], self.mouse_end_pos[1] - self.mouse_start_pos[1]]
-            vect_end = [self.ball.rect.centerx + self.mouse_vect[0], self.ball.rect.centery + self.mouse_vect[1]]
-            self.rect = pg.draw.line(self.screen, (0, 0, 0), self.ball.rect.center, vect_end)
-            self.image = pg.Surface((self.rect.w, self.rect.h))
-            self.image.blit(self.screen, (0, 0), self.rect)
-            self.image.set_colorkey((255, 255, 255))
-            self.screen.fill((255, 255, 255))
-            if not pg.mouse.get_pressed(3)[0]:
-                self.ball.vect = [self.mouse_end_pos[0] - self.mouse_start_pos[0], self.mouse_end_pos[1] - self.mouse_start_pos[1]]
-                self.ball.speed = math.sqrt(self.ball.vect[0]**2 + self.ball.vect[1]**2)
-                self.press_flag = False
-                self.image = pg.Surface((0, 0))
-        else:
-            if pg.mouse.get_pressed(3)[0]:
-                self.mouse_start_pos = pg.mouse.get_pos()
-                self.press_flag = True
-
 def main():
 
     pg.init()
@@ -109,7 +76,6 @@ def main():
 
     Ball.containers = all
     FallGate.containers = all
-    Arrow.containers = all
 
     FallGate()
     
