@@ -6,11 +6,14 @@ import random
 from pygame.sprite import AbstractGroup
 
 SCREEN_SIZE = (400, 600)
-BALL_SIZE = [4, 7, 10, 14, 18, 23, 28, 34, 40]
+BALL_SIZE = [15, 20, 25, 30, 35, 40, 45, 50, 60]
 FRAME_RATE = 30
 
 class Ball(pg.sprite.Sprite):
-    def __init__(self, pos, radius):
+    ballList = []
+    ballGroup = pg.sprite.Group()
+    updateTime = 0.25
+    def __init__(self, pos, radius, index):
         pg.sprite.Sprite.__init__(self, self.containers)
         self.radius = radius
         self.image = pg.Surface((self.radius * 2, self.radius * 2))
@@ -18,14 +21,71 @@ class Ball(pg.sprite.Sprite):
         pg.draw.circle(self.image, (255, 0, 0), (self.radius, self.radius), self.radius)
         self.rect = pg.Rect(pos[0] - self.radius, pos[1] - self.radius, self.radius * 2, self.radius * 2)
         self.image.set_colorkey((0, 0, 0))
-        self.speed = 20
+        self.speed = [0, 0]
+        self.force = [0, 9.8]
+        self.tempForce = [0, 0]
         self.fallFlag = False
+        self.ballListIndex = index
 
     def update(self, *args, **kwargs):
         if self.fallFlag:
-            self.rect.y += self.speed
-            if self.rect.centery > SCREEN_SIZE[1] - self.radius:
+
+            self.rect.x += self.speed[0] * self.updateTime + (self.force[0] + self.tempForce[0]) * self.updateTime**2
+            self.rect.y += self.speed[1] * self.updateTime + (self.force[1] + self.tempForce[1]) * self.updateTime**2
+
+            self.tempForce[0] = 0
+            self.tempForce[1] = 0
+            
+            for index in self.collideList():
+                i = self.ballList[index]
+                tempR = math.sqrt((i.rect.centerx - self.rect.centerx)**2 + (i.rect.centery - self.rect.centery)**2) + sys.float_info.min
+                tempSin = (i.rect.centerx - self.rect.centerx) / tempR
+                tempCos = (i.rect.centery - self.rect.centery) / tempR
+                self.rect.x = i.rect.centerx - (i.rect.w * 0.5 + self.radius) * tempSin - self.radius
+                self.rect.y = i.rect.centery - (i.rect.w * 0.5 + self.radius) * tempCos - self.radius
+                tempR = math.sqrt((i.rect.centerx - self.rect.centerx)**2 + (i.rect.centery - self.rect.centery)**2) + sys.float_info.min
+                tempSin = (i.rect.centerx - self.rect.centerx) / tempR
+                tempCos = (i.rect.centery - self.rect.centery) / tempR
+                self.tempForce[0] = -self.force[1] * tempSin / (abs(tempSin) + tempCos + sys.float_info.min)
+                self.tempForce[1] = -self.force[1] * tempCos / (abs(tempSin) + tempCos + sys.float_info.min)
+                i.tempForce[0] = -self.tempForce[0]
+                i.tempForce[1] = -self.tempForce[1]
+                self.speed[0] = -self.speed[1] * tempSin / (abs(tempSin) + tempCos + sys.float_info.min) * 0.5
+                self.speed[1] = -self.speed[1] * tempCos / (abs(tempSin) + tempCos + sys.float_info.min) * 0.5
+
+    def fixedUpdate(self):
+        if self.fallFlag:
+
+            self.tempForce[0] *= 0.5
+            self.tempForce[1] *= 0.5
+
+            self.speed[0] = self.speed[0] + (self.force[0] + self.tempForce[0]) * self.updateTime
+            self.speed[1] = self.speed[1] + (self.force[1] + self.tempForce[1]) * self.updateTime
+
+            if self.rect.centery >= SCREEN_SIZE[1] - self.radius:
                 self.rect.y = SCREEN_SIZE[1] - self.radius * 2
+                self.speed[0] *= 0.6
+                self.speed[1] = 0
+                self.tempForce[1] = -self.force[1]
+            if self.rect.centery <= self.radius:
+                self.rect.y = 0
+            if self.rect.centerx <= self.radius:
+                self.rect.x = 0
+                self.tempForce[0] = 0
+                self.speed[0] *= -1
+            if self.rect.centerx >= SCREEN_SIZE[0] - self.radius:
+                self.rect.x = SCREEN_SIZE[0] - self.radius * 2
+                self.tempForce[0] = 0
+                self.speed[0] *= -1
+
+    def collideList(self):
+        indexList = []
+        for i in range(len(self.ballList)):
+            if i == self.ballListIndex:
+                continue
+            if pg.sprite.collide_circle(self, self.ballList[i]):
+                indexList.append(i)
+        return indexList
 
 class FallGate(pg.sprite.Sprite):
     def __init__(self):
@@ -34,8 +94,9 @@ class FallGate(pg.sprite.Sprite):
         self.image = self.font.render("V", True, (0, 0, 0))
         self.rect = self.image.get_rect().move(SCREEN_SIZE[0] / 2, 80)
         self.ballRadius = BALL_SIZE[random.randint(0, int(len(BALL_SIZE) * 0.5))]
-        self.ballList = [Ball((self.rect.centerx, 40), self.ballRadius)]
-        self.ball = self.ballList[-1]
+        Ball.ballList = [Ball((self.rect.centerx, 40), self.ballRadius, len(Ball.ballList))]
+        Ball.ballGroup.add(Ball.ballList[-1])
+        self.ball = Ball.ballList[-1]
         self.speed = 0
         self.spaceFlag = True
 
@@ -43,9 +104,11 @@ class FallGate(pg.sprite.Sprite):
         if args[0][pg.K_SPACE]:
             if self.spaceFlag:
                 self.ball.fallFlag = True
+                self.ball.rect.y = 100
                 self.ballRadius = BALL_SIZE[random.randint(0, int(len(BALL_SIZE) * 0.5))]
-                self.ballList.append(Ball((self.rect.centerx, 50), self.ballRadius))
-                self.ball = self.ballList[-1]
+                Ball.ballList.append(Ball((self.rect.centerx, 50), self.ballRadius, len(Ball.ballList)))
+                Ball.ballGroup.add(Ball.ballList[-1])
+                self.ball = Ball.ballList[-1]
                 self.spaceFlag = False
         else:
             self.spaceFlag = True
@@ -89,6 +152,8 @@ def main():
                 
         all.clear(screen, background)
         all.update(pg.key.get_pressed())
+        for ball in Ball.ballList:
+            ball.fixedUpdate()
         dirty = all.draw(screen)
         pg.display.update(dirty)
 
