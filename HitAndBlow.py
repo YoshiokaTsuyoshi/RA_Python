@@ -2,6 +2,8 @@ count = 0
 hit = 0
 blow = 0
 ans = [1, 2, 3]
+
+#予想プログラムで使用する変数
 choices = [i for i in range(10)]
 history = [[] for _i in range(4)]
 zero_flag = False
@@ -27,11 +29,15 @@ while True:
         if hit == 1:
             flag = 20
 
+
+    #予想プログラムで使う用の履歴を格納
     history[0].append(ans[0] * 100 + ans[1] * 10 + ans[2])
     history[1].append(hit)
     history[2].append(blow)
     history[3].append(hit + blow)
 
+
+    #以下予想プログラム(最短ではない)
     if flag == 0:
         ans = [4, 5, 6]
         flag += 1
