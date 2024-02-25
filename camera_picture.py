@@ -1,5 +1,6 @@
 import pygame as pg
 import pygame.camera
+import time
 
 SCREEN_SIZE = (640, 480)
 
@@ -11,7 +12,6 @@ camera.start()
 screen = pg.display.set_mode(SCREEN_SIZE)
 clock = pg.time.Clock()
 flag = True
-count = 0
 
 while flag:
     for event in pg.event.get():
@@ -21,8 +21,8 @@ while flag:
             if event.key == pg.K_ESCAPE:
                 flag = False
             elif event.key == pg.K_SPACE:
-                pg.image.save(screen, "picture{}.png".format(count))
-                count += 1
+                timer = time.gmtime()
+                pg.image.save(screen, "{}_{}_{}_{}_{}_{}.png".format(timer.tm_year, timer.tm_mon, timer.tm_mday, timer.tm_hour, timer.tm_min, timer.tm_sec))
             
     camera.get_image(screen)
     pg.display.flip()
