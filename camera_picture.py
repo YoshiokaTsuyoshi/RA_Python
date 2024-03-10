@@ -23,10 +23,11 @@ while flag:
             elif event.key == pg.K_SPACE:
                 timer = time.gmtime()
                 pg.image.save(screen, "{}_{}_{}_{}_{}_{}.png".format(timer.tm_year, timer.tm_mon, timer.tm_mday, timer.tm_hour, timer.tm_min, timer.tm_sec))
+                pg.time.wait(500)
             
     camera.get_image(screen)
     pg.display.flip()
-    clock.tick(100)
+    clock.tick(60)
 
 camera.stop()
 pg.quit()
